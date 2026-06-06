@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin — Orders</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f0e0c;
+      --card: #1a1815;
+      --gold: #e8b96a;
+      --text: #f0ece4;
+      --muted: #7a7468;
+      --border: #2e2b26;
+      --green: #4caf76;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 40px 20px 80px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1.8rem, 5vw, 3rem);
+      color: var(--gold);
+    }
+
+    header p { color: var(--muted); margin-top: 6px; font-size: 0.9rem; }
+
+    .stats {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-bottom: 36px;
+    }
+
+    .stat-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 28px;
+      text-align: center;
+      min-width: 130px;
+    }
+
+    .stat-box .num {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.9rem;
+      color: var(--gold);
+    }
+
+    .stat-box .label { color: var(--muted); font-size: 0.8rem; margin-top: 4px; }
+
+    .refresh-btn {
+      display: block;
+      margin: 0 auto 30px;
+      padding: 10px 24px;
+      background: transparent;
+      border: 1px solid var(--gold);
+      color: var(--gold);
+      border-radius: 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .refresh-btn:hover { background: #271f10; }
+
+    table {
+      width: 100%;
+      max-width: 720px;
+      margin: 0 auto;
+      border-collapse: collapse;
+    }
+
+    thead tr {
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      text-align: left;
+      padding: 12px 16px;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+    }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+
+    tbody tr:hover { background: var(--card); }
+
+    td {
+      padding: 14px 16px;
+      font-size: 0.92rem;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 500;
+    }
+
+    .badge-burger { background: #2a1f0c; color: #e8a830; }
+    .badge-pizza  { background: #2a140c; color: #e86a40; }
+    .badge-coke   { background: #0c1a28; color: #4a9de8; }
+    .badge-other  { background: #1a1a1a; color: #aaa; }
+
+    #empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 60px 20px;
+      display: none;
+    }
+
+    #loading {
+      text-align: center;
+      color: var(--muted);
+      padding: 60px 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>👨‍🍳 Admin Panel</h1>
+    <p>Live order feed</p>
+  </header>
+
+  <div class="stats">
+    <div class="stat-box">
+      <div class="num" id="stat-total">—</div>
+      <div class="label">Total Orders</div>
+    </div>
+    <div class="stat-box">
+      <div class="num" id="stat-revenue">—</div>
+      <div class="label">Revenue (₹)</div>
+    </div>
+  </div>
+
+  <button class="refresh-btn" onclick="loadOrders()">🔄 Refresh</button>
+
+  <div id="loading">Loading orders...</div>
+  <div id="empty">No orders yet. Waiting for customers! 🍽️</div>
+
+  <table id="orders-table" style="display:none">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Item</th>
+        <th>Qty</th>
+        <th>Price</th>
+        <th>Subtotal</th>
+        <th>Time</th>
+      </tr>
+    </thead>
+    <tbody id="orders-body"></tbody>
+  </table>
+
+  <script>
+    function badgeClass(item) {
+      const m = { Burger: 'badge-burger', Pizza: 'badge-pizza', Coke: 'badge-coke' };
+      return m[item] || 'badge-other';
+    }
+
+    async function loadOrders() {
+      document.getElementById('loading').style.display = 'block';
+      document.getElementById('orders-table').style.display = 'none';
+      document.getElementById('empty').style.display = 'none';
+
+      try {
+        const res = await fetch('http://127.0.0.1:5000/orders');
+        const orders = await res.json();
+
+        document.getElementById('loading').style.display = 'none';
+
+        if (!orders.length) {
+          document.getElementById('empty').style.display = 'block';
+          document.getElementById('stat-total').textContent = '0';
+          document.getElementById('stat-revenue').textContent = '0';
+          return;
+        }
+
+        const revenue = orders.reduce((sum, o) => sum + (o.price * (o.qty || 1)), 0);
+        document.getElementById('stat-total').textContent = orders.length;
+        document.getElementById('stat-revenue').textContent = '₹' + revenue;
+
+        const body = document.getElementById('orders-body');
+        body.innerHTML = orders.map((o, i) => `
+          <tr>
+            <td style="color:var(--muted)">${o.id}</td>
+            <td><span class="badge ${badgeClass(o.item)}">${o.item}</span></td>
+            <td>${o.qty || 1}</td>
+            <td>₹${o.price}</td>
+            <td>₹${o.price * (o.qty || 1)}</td>
+            <td style="color:var(--muted); font-size:0.82rem">${o.time}</td>
+          </tr>
+        `).join('');
+
+        document.getElementById('orders-table').style.display = 'table';
+      } catch (err) {
+        document.getElementById('loading').textContent = '❌ Could not connect to server. Make sure backend is running on port 5000.';
+      }
+    }
+
+    loadOrders();
+    // Auto-refresh every 10 seconds
+    setInterval(loadOrders, 10000);
+  </script>
+</body>
+</html>

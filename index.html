@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>My Restaurant 🍽️</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f0e0c;
+      --card: #1a1815;
+      --gold: #e8b96a;
+      --gold2: #f5d08a;
+      --text: #f0ece4;
+      --muted: #7a7468;
+      --border: #2e2b26;
+      --red: #e05c4b;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 40px 20px 80px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2rem, 6vw, 3.5rem);
+      color: var(--gold);
+      letter-spacing: 1px;
+    }
+
+    header p {
+      color: var(--muted);
+      margin-top: 8px;
+      font-size: 0.95rem;
+    }
+
+    .menu {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 24px;
+      max-width: 760px;
+      margin: 0 auto 40px;
+    }
+
+    .item {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      width: 200px;
+      padding: 28px 20px 22px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: transform 0.2s, border-color 0.2s;
+      position: relative;
+    }
+
+    .item:hover { transform: translateY(-4px); border-color: var(--gold); }
+
+    .item.selected {
+      border-color: var(--gold);
+      background: #201e1a;
+    }
+
+    .item.selected::after {
+      content: '✓';
+      position: absolute;
+      top: 10px; right: 14px;
+      color: var(--gold);
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .emoji { font-size: 2.4rem; }
+
+    .item h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.15rem;
+      color: var(--text);
+    }
+
+    .price {
+      color: var(--gold);
+      font-size: 1.1rem;
+      font-weight: 500;
+    }
+
+    .qty-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .qty-btn {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 1rem;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .qty-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+    .qty { font-size: 1rem; min-width: 20px; text-align: center; }
+
+    .cart-summary {
+      max-width: 440px;
+      margin: 0 auto 32px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px 24px;
+    }
+
+    .cart-summary h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.1rem;
+      color: var(--gold);
+      margin-bottom: 14px;
+    }
+
+    .cart-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.9rem;
+      padding: 5px 0;
+      border-bottom: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    .cart-row:last-of-type { border-bottom: none; }
+
+    .cart-total {
+      display: flex;
+      justify-content: space-between;
+      font-weight: 600;
+      color: var(--text);
+      margin-top: 12px;
+      font-size: 1rem;
+    }
+
+    .place-btn {
+      display: block;
+      width: 100%;
+      max-width: 440px;
+      margin: 0 auto;
+      padding: 16px;
+      background: var(--gold);
+      color: #0f0e0c;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.15s;
+      letter-spacing: 0.3px;
+    }
+
+    .place-btn:hover { background: var(--gold2); transform: scale(1.01); }
+    .place-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    #toast {
+      position: fixed;
+      bottom: 30px; left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: #2a4a2a;
+      border: 1px solid #3d7a3d;
+      color: #a8d8a8;
+      padding: 12px 28px;
+      border-radius: 40px;
+      font-size: 0.9rem;
+      transition: transform 0.35s ease;
+      pointer-events: none;
+      z-index: 999;
+    }
+
+    #toast.show { transform: translateX(-50%) translateY(0); }
+    #toast.error { background: #4a1f1a; border-color: #a33; color: #f8a;  }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>🍽️ My Restaurant</h1>
+    <p>Fresh food, made with love</p>
+  </header>
+
+  <div class="menu">
+    <div class="item" id="card-Burger" onclick="toggleItem('Burger', 100)">
+      <span class="emoji">🍔</span>
+      <h3>Burger</h3>
+      <p class="price">₹100</p>
+      <div class="qty-controls" id="qty-controls-Burger" style="display:none" onclick="event.stopPropagation()">
+        <button class="qty-btn" onclick="changeQty('Burger', -1)">−</button>
+        <span class="qty" id="qty-Burger">1</span>
+        <button class="qty-btn" onclick="changeQty('Burger', 1)">+</button>
+      </div>
+    </div>
+
+    <div class="item" id="card-Pizza" onclick="toggleItem('Pizza', 200)">
+      <span class="emoji">🍕</span>
+      <h3>Pizza</h3>
+      <p class="price">₹200</p>
+      <div class="qty-controls" id="qty-controls-Pizza" style="display:none" onclick="event.stopPropagation()">
+        <button class="qty-btn" onclick="changeQty('Pizza', -1)">−</button>
+        <span class="qty" id="qty-Pizza">1</span>
+        <button class="qty-btn" onclick="changeQty('Pizza', 1)">+</button>
+      </div>
+    </div>
+
+    <div class="item" id="card-Coke" onclick="toggleItem('Coke', 50)">
+      <span class="emoji">🥤</span>
+      <h3>Coke</h3>
+      <p class="price">₹50</p>
+      <div class="qty-controls" id="qty-controls-Coke" style="display:none" onclick="event.stopPropagation()">
+        <button class="qty-btn" onclick="changeQty('Coke', -1)">−</button>
+        <span class="qty" id="qty-Coke">1</span>
+        <button class="qty-btn" onclick="changeQty('Coke', 1)">+</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="cart-summary" id="cart-summary" style="display:none">
+    <h2>🛒 Your Order</h2>
+    <div id="cart-rows"></div>
+    <div class="cart-total">
+      <span>Total</span>
+      <span id="cart-total-price">₹0</span>
+    </div>
+  </div>
+
+  <button class="place-btn" id="place-btn" onclick="placeOrder()">👉 Place Order</button>
+  <div id="toast">✅ Order placed successfully!</div>
+
+  <script>
+    const prices = { Burger: 100, Pizza: 200, Coke: 50 };
+    const cart = {};
+
+    function toggleItem(name, price) {
+      if (cart[name]) {
+        delete cart[name];
+        document.getElementById('card-' + name).classList.remove('selected');
+        document.getElementById('qty-controls-' + name).style.display = 'none';
+        document.getElementById('qty-' + name).textContent = '1';
+      } else {
+        cart[name] = 1;
+        document.getElementById('card-' + name).classList.add('selected');
+        document.getElementById('qty-controls-' + name).style.display = 'flex';
+      }
+      updateCart();
+    }
+
+    function changeQty(name, delta) {
+      if (!cart[name]) return;
+      cart[name] = Math.max(1, cart[name] + delta);
+      document.getElementById('qty-' + name).textContent = cart[name];
+      updateCart();
+    }
+
+    function updateCart() {
+      const rows = document.getElementById('cart-rows');
+      const summary = document.getElementById('cart-summary');
+      const keys = Object.keys(cart);
+
+      if (keys.length === 0) { summary.style.display = 'none'; return; }
+
+      summary.style.display = 'block';
+      let total = 0;
+      rows.innerHTML = keys.map(k => {
+        const sub = prices[k] * cart[k];
+        total += sub;
+        return `<div class="cart-row"><span>${k} × ${cart[k]}</span><span>₹${sub}</span></div>`;
+      }).join('');
+      document.getElementById('cart-total-price').textContent = '₹' + total;
+    }
+
+    async function placeOrder() {
+      const keys = Object.keys(cart);
+      if (keys.length === 0) { showToast('Please select at least one item!', true); return; }
+
+      const btn = document.getElementById('place-btn');
+      btn.disabled = true;
+      btn.textContent = 'Placing order...';
+
+      const time = new Date().toLocaleTimeString();
+      const orders = keys.map(k => ({ item: k, price: prices[k], qty: cart[k], time }));
+
+      try {
+        for (const o of orders) {
+          await fetch('http://127.0.0.1:5000/order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(o)
+          });
+        }
+        showToast('✅ Order placed successfully!');
+        // Reset cart
+        keys.forEach(k => {
+          delete cart[k];
+          document.getElementById('card-' + k).classList.remove('selected');
+          document.getElementById('qty-controls-' + k).style.display = 'none';
+          document.getElementById('qty-' + k).textContent = '1';
+        });
+        updateCart();
+      } catch (err) {
+        showToast('❌ Could not reach server. Is it running?', true);
+      }
+
+      btn.disabled = false;
+      btn.textContent = '👉 Place Order';
+    }
+
+    function showToast(msg, isError = false) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = isError ? 'error show' : 'show';
+      setTimeout(() => t.className = isError ? 'error' : '', 3000);
+    }
+  </script>
+</body>
+</html>
